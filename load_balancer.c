@@ -76,7 +76,7 @@ int main()
         // forwarding read requests with odd sequence numbers
         else if (msg.Sequence_Number % 2)
         {
-            msg.mtype = 2;
+            msg.mtype = 1;
             printf("Forwarding read request to secondary server 1\n");
             if (msgsnd(msqid, &msg, sizeof(message), 0) == -1)
             {
