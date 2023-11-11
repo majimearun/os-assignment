@@ -28,8 +28,20 @@ typedef struct message
 // 1 - load balancer to secondary server 2 (even requests)
 // sequence number * 10 - load balancer to client
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc != 2)
+    {
+        printf("Enter the correct number of arguments (add server number)\n");
+    }
+    int server_number = atoi(argv[1]);
+
+    if (server_number != 1 && server_number != 2)
+    {
+        printf("Enter the correct server number (1 or 2)\n");
+        exit(1);
+    }
+
     message msg;
 
     key_t key;
@@ -49,7 +61,7 @@ int main()
     while (1)
     {
         message msg;
-        if (msgrcv(msqid, &msg, sizeof(message), 2, 0) == -1)
+        if (msgrcv(msqid, &msg, sizeof(message), server_number, 0) == -1)
         {
             perror("msgrcv");
             exit(1);
