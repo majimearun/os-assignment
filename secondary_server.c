@@ -12,6 +12,13 @@
 
 #define PERMS 0644
 
+// MTYPE INDEX BEING USED
+// 4 - client to load balancer
+// 3 - load balancer to primary server
+// 1 - load balancer to secondary server 1 (odd requests)
+// 2 - load balancer to secondary server 2 (even requests)
+// sequence number * 10 - load balancer to client
+
 typedef struct message
 {
     long mtype;

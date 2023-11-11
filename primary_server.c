@@ -24,8 +24,8 @@ typedef struct message
 // MTYPE INDEX BEING USED
 // 4 - client to load balancer
 // 3 - load balancer to primary server
-// 2 - load balancer to secondary server 1 (odd requests)
-// 1 - load balancer to secondary server 2 (even requests)
+// 1 - load balancer to secondary server 1 (odd requests)
+// 2 - load balancer to secondary server 2 (even requests)
 // sequence number * 10 - load balancer to client
 
 int main()
