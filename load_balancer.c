@@ -21,19 +21,12 @@ typedef struct message
 
 } message;
 
-// MTYPE INDEX BEING USED
-// 4 - client to load balancer
-// 3 - load balancer to primary server
-// 1 - load balancer to secondary server 1 (odd requests)
-// 2 - load balancer to secondary server 2 (even requests)
-// sequence number * 10 - load balancer to client
-
 int main()
 {
     message msg;
 
     key_t key;
-    if ((key = ftok("testing.txt", 'A')) == -1)
+    if ((key = ftok("load_balancer.c", 'A')) == -1)
     {
         perror("ftok");
         exit(1);
@@ -48,17 +41,10 @@ int main()
 
     while (1)
     {
-        message msg;
         if (msgrcv(msqid, &msg, sizeof(message), 4, 0) == -1)
         {
             perror("msgrcv");
             exit(1);
-        }
-
-        // cleanup step
-        if (msg.Operation_Number == 0)
-        {
-            break;
         }
 
         // forwarding write requests
@@ -73,28 +59,18 @@ int main()
             }
         }
 
-        // forwarding read requests with odd sequence numbers
-        else if (msg.Sequence_Number % 2)
+        else if (msg.Operation_Number == 0)
         {
-            msg.mtype = 1;
-            printf("Forwarding read request to secondary server 1\n");
+            msg.mtype = 3;
+            printf("Forwarding cleanup request to primary server\n");
             if (msgsnd(msqid, &msg, sizeof(message), 0) == -1)
             {
                 perror("msgsnd");
                 exit(1);
             }
-        }
 
-        // forwarding read requests with even sequence numbers
-        else
-        {
-            msg.mtype = 2;
-            printf("Forwarding read request to secondary server 2\n");
-            if (msgsnd(msqid, &msg, sizeof(message), 0) == -1)
-            {
-                perror("msgsnd");
-                exit(1);
-            }
+            sleep(5);
+            break;
         }
     }
 
@@ -104,5 +80,6 @@ int main()
         exit(1);
     }
 
+    printf("message queue deleted\n");
     return 0;
 }

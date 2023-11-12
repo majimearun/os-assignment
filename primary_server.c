@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,19 +22,55 @@ typedef struct message
 
 } message;
 
-// MTYPE INDEX BEING USED
-// 4 - client to load balancer
-// 3 - load balancer to primary server
-// 1 - load balancer to secondary server 1 (odd requests)
-// 2 - load balancer to secondary server 2 (even requests)
-// sequence number * 10 - load balancer to client
+typedef struct ThreadData
+{
+    int msqid;
+    message msg;
+} ThreadData;
+
+#define MAX_THREADS 100
+
+void *func(void *data)
+{
+    ThreadData *td = (ThreadData *)data;
+    int msqid = td->msqid;
+    message msg = td->msg;
+
+    printf("client: %d\n", msg.Sequence_Number);
+    printf("operation: %d\n", msg.Operation_Number);
+    printf("file name: %s\n", msg.mtext);
+    printf("--------------------\n");
+
+    if (msg.Operation_Number == 1)
+    {
+        msg.mtype = msg.Sequence_Number * 10;
+        char mess[100] = "File successfully added\n";
+        strcpy(msg.mtext, mess);
+    }
+
+    else if (msg.Operation_Number == 2)
+    {
+        msg.mtype = msg.Sequence_Number * 10;
+        char mess[100] = "File successfully modified\n";
+        strcpy(msg.mtext, mess);
+    }
+
+    if (msgsnd(msqid, &msg, sizeof(message), 0) == -1)
+    {
+        perror("msgsnd");
+        exit(1);
+    }
+
+    free(td);
+    pthread_exit(NULL);
+}
 
 int main()
 {
     message msg;
 
     key_t key;
-    if ((key = ftok("testing.txt", 'A')) == -1)
+    if ((key = ftok("load_balancer.c", 'A')) == -1)
     {
         perror("ftok");
         exit(1);
@@ -46,6 +83,9 @@ int main()
         exit(1);
     }
 
+    pthread_t threads[MAX_THREADS];
+    int n_threads = 0;
+
     while (1)
     {
         message msg;
@@ -55,53 +95,23 @@ int main()
             exit(1);
         }
 
-        pid_t child_server;
-
-        if ((child_server = fork()) == -1)
+        if (msg.Operation_Number == 0)
         {
-            perror("fork");
-            exit(1);
+            for (int i = 0; i < n_threads; i++)
+            {
+                printf("Waiting for thread %d to finish\n", i);
+                pthread_join(threads[i], NULL);
+            }
+            break;
         }
 
-        if (child_server == 0)
-        {
-
-            printf("client: %d\n", msg.Sequence_Number);
-            printf("operation: %d\n", msg.Operation_Number);
-            printf("file name: %s\n", msg.mtext);
-            printf("--------------------\n");
-
-            if (msg.Operation_Number == 1)
-            {
-                msg.mtype = msg.Sequence_Number * 10;
-                char mess[100] = "File successfully added\n";
-                strcpy(msg.mtext, mess);
-            }
-
-            else if (msg.Operation_Number == 2)
-            {
-                msg.mtype = msg.Sequence_Number * 10;
-                char mess[100] = "File successfully modified\n";
-                strcpy(msg.mtext, mess);
-            }
-
-            if (msgsnd(msqid, &msg, sizeof(message), 0) == -1)
-            {
-                perror("msgsnd");
-                exit(1);
-            }
-        }
         else
         {
-            wait(NULL);
+            ThreadData *td = (ThreadData *)malloc(sizeof(ThreadData));
+            td->msqid = msqid;
+            td->msg = msg;
+            pthread_create(&threads[n_threads++], NULL, func, (void *)td);
         }
     }
-
-    if (msgctl(msqid, IPC_RMID, NULL) == -1)
-    {
-        perror("msgctl");
-        exit(1);
-    }
-
     return 0;
 }
