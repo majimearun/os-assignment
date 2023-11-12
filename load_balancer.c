@@ -14,10 +14,10 @@
 
 typedef struct message
 {
-    long mtype;
-    char mtext[100]; // Graph File Name or Server Response
-    int Sequence_Number;
-    int Operation_Number;
+    long mtype;           // Denotes who needs to receive the message
+    char contents[100];   // Graph File Name or Server Response
+    int Sequence_Number;  // Request number
+    int Operation_Number; // Operation to be performed
 
 } message;
 
@@ -41,29 +41,34 @@ int main()
 
     while (1)
     {
-        if (msgrcv(msqid, &msg, sizeof(message), 4, 0) == -1)
+        if (msgrcv(msqid, &msg, sizeof(message) - sizeof(long), 4, 0) == -1)
         {
             perror("msgrcv");
             exit(1);
         }
 
-        // forwarding write requests
-        if (msg.Operation_Number == 1 || msg.Operation_Number == 2)
+        // forwarding cleanup requests
+        if (msg.Operation_Number == 0)
         {
             msg.mtype = 3;
-            printf("Forwarding write request to primary server\n");
-            if (msgsnd(msqid, &msg, sizeof(message), 0) == -1)
+            printf("Forwarding cleanup request to primary server...\n");
+            if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
                 exit(1);
             }
-        }
 
-        else if (msg.Operation_Number == 0)
-        {
-            msg.mtype = 3;
-            printf("Forwarding cleanup request to primary server\n");
-            if (msgsnd(msqid, &msg, sizeof(message), 0) == -1)
+            msg.mtype = 2;
+            printf("Forwarding cleanup request to secondary server 1...\n");
+            if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
+            {
+                perror("msgsnd");
+                exit(1);
+            }
+
+            msg.mtype = 1;
+            printf("Forwarding cleanup request to secondary server 2...\n");
+            if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
                 exit(1);
@@ -71,6 +76,42 @@ int main()
 
             sleep(5);
             break;
+        }
+
+        // forwarding write requests
+        else if (msg.Operation_Number == 1 || msg.Operation_Number == 2)
+        {
+            msg.mtype = 3;
+            printf("Forwarding write request to primary server...\n");
+            if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
+            {
+                perror("msgsnd");
+                exit(1);
+            }
+        }
+
+        else
+        {
+            if (msg.Sequence_Number % 2)
+            {
+                msg.mtype = 1;
+                printf("Forwarding read request to secondary server 1...\n");
+                if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
+                {
+                    perror("msgsnd");
+                    exit(1);
+                }
+            }
+            else
+            {
+                msg.mtype = 2;
+                printf("Forwarding read request to secondary server 2...\n");
+                if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
+                {
+                    perror("msgsnd");
+                    exit(1);
+                }
+            }
         }
     }
 
@@ -80,6 +121,7 @@ int main()
         exit(1);
     }
 
-    printf("message queue deleted\n");
+    printf("message queue deleted, cleanup process completed...\n");
+    printf("load balancer exiting...\n");
     return 0;
 }

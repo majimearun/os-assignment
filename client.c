@@ -12,16 +12,15 @@
 
 typedef struct message
 {
-    long mtype;
-    char mtext[100];
-    int Sequence_Number;
-    int Operation_Number;
+    long mtype;           // Denotes who needs to receive the message
+    char contents[100];   // Graph File Name or Server Response
+    int Sequence_Number;  // Request number
+    int Operation_Number; // Operation to be performed
 
 } message;
 
 int main()
 {
-    message msg;
 
     key_t key;
     if ((key = ftok("load_balancer.c", 'A')) == -1)
@@ -39,16 +38,18 @@ int main()
 
     while (1)
     {
+        message msg;
         msg.mtype = 4;
 
         //  send step:
-
         printf("1. Add a new graph to the database\n");
         printf("2. Modify an existing graph of the database\n");
+        printf("3. Perform DFS on an existing graph of the database\n");
+        printf("4. Perform BFS on an existing graph of the database\n");
 
         int sequence_number = 0;
         int operation_number = 0;
-        char mtext[100] = "";
+        char contents[100] = "";
 
         printf("Enter Sequence Number: ");
         scanf("%d", &sequence_number);
@@ -59,29 +60,22 @@ int main()
         msg.Operation_Number = operation_number;
 
         printf("Enter Graph File Name: ");
-        scanf("%s", mtext);
-        strcpy(msg.mtext, mtext);
+        scanf("%s", contents);
+        strcpy(msg.contents, contents);
 
-        printf("--------------------\n");
-        printf("client: %d\n", msg.Sequence_Number);
-        printf("operation: %d\n", msg.Operation_Number);
-        printf("file name: %s\n", msg.mtext);
-        printf("mtype: %ld\n", msg.mtype);
-        printf("--------------------\n");
-
-        if (msgsnd(msqid, &msg, sizeof(message), 0) == -1)
+        if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
         {
             perror("msgsnd");
             exit(1);
         }
 
         // receive step:
-        if (msgrcv(msqid, &msg, sizeof(message), sequence_number * 10, 0) == -1)
+        if (msgrcv(msqid, &msg, sizeof(message) - sizeof(long), sequence_number * 10, 0) == -1)
         {
             perror("msgrcv");
             exit(1);
         }
-        printf("%s\n", msg.mtext);
+        printf("%s\n", msg.contents);
     }
     return 0;
 }

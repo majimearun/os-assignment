@@ -12,10 +12,10 @@
 
 typedef struct message
 {
-    long mtype;
-    char mtext[100];
-    int Sequence_Number;
-    int Operation_Number;
+    long mtype;           // Denotes who needs to receive the message
+    char contents[100];   // Graph File Name or Server Response
+    int Sequence_Number;  // Request number
+    int Operation_Number; // Operation to be performed
 
 } message;
 
@@ -48,7 +48,7 @@ int main()
         {
             msg.Operation_Number = 0;
             msg.mtype = 4;
-            if (msgsnd(msqid, &msg, sizeof(msg), 0) == -1)
+            if (msgsnd(msqid, &msg, sizeof(msg) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
                 exit(1);

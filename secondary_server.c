@@ -36,17 +36,17 @@ void *func(void *data)
     int msqid = td->msqid;
     message msg = td->msg;
 
-    if (msg.Operation_Number == 1)
+    if (msg.Operation_Number == 3)
     {
         msg.mtype = msg.Sequence_Number * 10;
-        char mess[100] = "File successfully added\n";
+        char mess[100] = "DFS successfully performed\n";
         strcpy(msg.contents, mess);
     }
 
-    else if (msg.Operation_Number == 2)
+    else if (msg.Operation_Number == 4)
     {
         msg.mtype = msg.Sequence_Number * 10;
-        char mess[100] = "File successfully modified\n";
+        char mess[100] = "BFS successfully performed\n";
         strcpy(msg.contents, mess);
     }
 
@@ -60,8 +60,23 @@ void *func(void *data)
     pthread_exit(NULL);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+
+    if (argc != 2)
+    {
+        printf("Please enter the server number as an argument\n");
+        exit(1);
+    }
+
+    int server_number = atoi(argv[1]);
+
+    if (server_number != 1 && server_number != 2)
+    {
+        printf("Please enter a valid server number (1 or 2)\n");
+        exit(1);
+    }
+
     message msg;
 
     key_t key;
@@ -84,7 +99,7 @@ int main()
     while (1)
     {
         message msg;
-        if (msgrcv(msqid, &msg, sizeof(message) - sizeof(long), 3, 0) == -1)
+        if (msgrcv(msqid, &msg, sizeof(message) - sizeof(long), server_number, 0) == -1)
         {
             perror("msgrcv");
             exit(1);
