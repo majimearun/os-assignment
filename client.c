@@ -53,7 +53,7 @@ int main()
         printf("1. Add a new graph to the database\n");
         printf("2. Modify an existing graph of the database\n");
         printf("3. Perform DFS on an existing graph of the database\n");
-        printf("4. Perform BFS on an existing graph of the databse\n");
+        printf("4. Perform BFS on an existing graph of the database\n");
 
         int sequence_number = 0;
         int operation_number = 0;

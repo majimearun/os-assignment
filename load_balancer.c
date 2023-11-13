@@ -52,6 +52,7 @@ int main()
         {
             msg.mtype = 3;
             printf("Forwarding cleanup request to primary server...\n");
+            fflush(stdout);
             if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
@@ -60,6 +61,7 @@ int main()
 
             msg.mtype = 2;
             printf("Forwarding cleanup request to secondary server 1...\n");
+            fflush(stdout);
             if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
@@ -68,6 +70,7 @@ int main()
 
             msg.mtype = 1;
             printf("Forwarding cleanup request to secondary server 2...\n");
+            fflush(stdout);
             if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
