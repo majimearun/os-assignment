@@ -12,26 +12,19 @@
 
 typedef struct message
 {
-    long mtype;
-    char mtext[100]; // Graph File Name or Server Response
-    int Sequence_Number;
-    int Operation_Number;
+    long mtype;           // Denotes who needs to receive the message
+    char contents[100];   // Graph File Name or Server Response
+    int Sequence_Number;  // Request number
+    int Operation_Number; // Operation to be performed
 
 } message;
-
-// MTYPE INDEX BEING USED
-// 4 - client to load balancer
-// 3 - load balancer to primary server
-// 2 - load balancer to secondary server 1 (odd requests)
-// 1 - load balancer to secondary server 2 (even requests)
-// sequence number * 10 - load balancer to client
 
 int main()
 {
     message msg;
 
     key_t key;
-    if ((key = ftok("testing.txt", 'A')) == -1)
+    if ((key = ftok("load_balancer.c", 'A')) == -1)
     {
         perror("ftok");
         exit(1);
@@ -55,7 +48,7 @@ int main()
         {
             msg.Operation_Number = 0;
             msg.mtype = 4;
-            if (msgsnd(msqid, &msg, sizeof(msg), 0) == -1)
+            if (msgsnd(msqid, &msg, sizeof(msg) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
                 exit(1);
