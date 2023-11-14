@@ -1,4 +1,7 @@
+#include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +10,9 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <sys/shm.h>
+#include <semaphore.h>
 
 #define PERMS 0644
 #define BUF_SIZE 1024
@@ -26,6 +31,7 @@ int shmid;
 char * shm;
 
 key_t key1;
+// sem_t *sem;
 
 int main()
 {
@@ -73,13 +79,29 @@ int main()
         scanf("%s", contents);
         strcpy(msg.contents, contents);
 
-
         if(msg.Operation_Number == 1 || msg.Operation_Number == 2){
 
-            if ((key1 = ftok("testing1.txt", 10)) == -1){
+            // // Create and initialize the semaphore (client)
+            // sem = sem_open(msg.contents, O_CREAT, PERMS, 1);
+            // if (sem == SEM_FAILED) {
+            //     if (errno != EEXIST) {
+            //         perror("sem_open");
+            //         exit(1);
+            //     } else {
+            //         sem = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
+            //         if (sem == SEM_FAILED) {
+            //             perror("sem_open");
+            //             exit(1);
+            //         }
+            //     }
+            // }
+
+            if ((key1 = ftok("testing1.txt", msg.Sequence_Number)) == -1){
                 perror("error\n");
                 exit(1);
             }
+
+            // sem_wait(sem); // Enter critical section
 
             if ((shmid = shmget(key1, sizeof(char[BUF_SIZE]), 0666 | IPC_CREAT)) == -1){
                 perror("shared memory");
@@ -109,8 +131,11 @@ int main()
             int c;
             while ((c = getchar()) != '\n' && c != EOF);
 
+            printf("Enter adjacency matrix, each row on a separate line and elements of a single row separated by whitespace characters: \n");
+            fflush(stdout);
+
             for (int i = 0; i < atoi(n); i++) {
-                printf("Enter adjacency matrix, each row on a separate line and elements of a single row separated by whitespace characters: ");
+
                 fflush(stdout);
                 scanf(" %[^\n]", adjrow); // Notice the space before % to skip leading whitespaces
 
@@ -120,8 +145,6 @@ int main()
                 // Append each row into shared memory along with the new line
                 sprintf(shm + strlen(shm), "%s\n", adjrow);
             }
-
-
 
             if (shmdt(shm) == -1){
                 perror("shmdt");
@@ -151,6 +174,13 @@ int main()
             perror("shmctl");
             return 1;
         }
+
+        // sem_post(sem);
     }
+
+    // Destroy the semaphore
+    // sem_close(sem);
+    // sem_unlink("testing");
+
     return 0;
 }

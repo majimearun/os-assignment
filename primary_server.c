@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/shm.h>
+#include <semaphore.h>
 
 #define PERMS 0644
 #define BUF_SIZE 1024
@@ -33,6 +34,8 @@ typedef struct ThreadData
 
 #define MAX_THREADS 100
 
+sem_t *sem;
+
 void* func(void *data) {
     ThreadData *td = (ThreadData *)data;
     int msqid = td->msqid;
@@ -41,10 +44,27 @@ void* func(void *data) {
     key_t key1;
     int shmid;
 
-    if ((key1 = ftok("testing1.txt", 10)) == -1){
+    // Create and initialize the semaphore (client)
+    sem = sem_open(msg.contents, O_CREAT, PERMS, 1);
+    if (sem == SEM_FAILED) {
+        if (errno != EEXIST) {
+            perror("sem_open");
+            exit(1);
+        } else {
+            sem = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
+            if (sem == SEM_FAILED) {
+                perror("sem_open");
+                exit(1);
+            }
+        }
+    }
+
+    if ((key1 = ftok("testing1.txt", msg.Sequence_Number)) == -1){
         perror("error\n");
         exit(1);
     }
+
+    sem_wait(sem);
 
     if ((shmid = shmget(key1, sizeof(char[BUF_SIZE]), 0666)) == -1) {
         perror("shared memory");
@@ -59,6 +79,8 @@ void* func(void *data) {
 
     int numNodes = atoi(strtok(shm, "\n"));
     
+    // Critical Section begins
+
     // Open the file for writing, creating or truncating it if it exists
     FILE* graphFile = fopen(msg.contents, "w");
     if (graphFile == NULL) {
@@ -108,6 +130,8 @@ void* func(void *data) {
         perror("msgsnd");
         exit(1);
     }
+
+    sem_post(sem);
 
     free(td);
     pthread_exit(NULL);
@@ -159,6 +183,7 @@ int main()
             ThreadData *td = (ThreadData *)malloc(sizeof(ThreadData));
             td->msqid = msqid;
             td->msg = msg;
+
             pthread_create(&threads[n_threads++], NULL, func, (void *)td);
             printf("Hello");
             fflush(stdout);
@@ -166,6 +191,9 @@ int main()
 
     }
 
+    // // Destroy the semaphore
+    sem_close(sem);
+    // sem_unlink("testing");
 
     return 0;
 }
