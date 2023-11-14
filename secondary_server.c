@@ -2,16 +2,20 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/shm.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #define PERMS 0644
+#define MAX_THREADS 100
+#define BUF_SIZE 1024
 
 typedef struct message
 {
@@ -26,15 +30,83 @@ typedef struct ThreadData
 {
     int msqid;
     message msg;
+    int n_threads;
 } ThreadData;
 
-#define MAX_THREADS 100
+sem_t *sem;
+sem_t *sem_read;
+int n_threads = 0;
 
 void *func(void *data)
 {
     ThreadData *td = (ThreadData *)data;
+
     int msqid = td->msqid;
     message msg = td->msg;
+
+    int shmid;
+    key_t key_shm;
+
+    // Create and initialize the semaphore (wrt)
+    sem = sem_open(msg.contents, O_CREAT, PERMS, 1);
+    if (sem == SEM_FAILED)
+    {
+        if (errno != EEXIST)
+        {
+            perror("sem_open");
+            exit(1);
+        }
+        else
+        {
+            sem = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
+            if (sem == SEM_FAILED)
+            {
+                perror("sem_open");
+                exit(1);
+            }
+        }
+    }
+
+    // Create and initialize the semaphore (read)
+    char name[100];
+    strcpy(name, msg.contents);
+    strcat(name, "_read");
+
+    sem_read = sem_open(name, O_CREAT, PERMS, 1);
+    if (sem_read == SEM_FAILED)
+    {
+        if (errno != EEXIST)
+        {
+            perror("sem_open");
+            exit(1);
+        }
+        else
+        {
+            sem_read = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
+            if (sem_read == SEM_FAILED)
+            {
+                perror("sem_open");
+                exit(1);
+            }
+        }
+    }
+
+    if ((key_shm = ftok("testing.txt", msg.Sequence_Number)) == -1)
+    {
+        perror("error\n");
+        exit(1);
+    }
+
+    sem_wait(sem_read);
+    n_threads++;
+    if (n_threads == 1)
+    {
+        sem_wait(sem);
+    }
+
+    sem_post(sem_read);
+
+    sleep(10);
 
     if (msg.Operation_Number == 3)
     {
@@ -55,6 +127,14 @@ void *func(void *data)
         perror("msgsnd");
         exit(1);
     }
+
+    sem_wait(sem_read);
+    n_threads--;
+    if (n_threads == 0)
+    {
+        sem_post(sem);
+    }
+    sem_post(sem_read);
 
     free(td);
     pthread_exit(NULL);
@@ -78,6 +158,7 @@ int main(int argc, char *argv[])
     }
 
     message msg;
+    int n_threads = 0;
 
     key_t key;
     if ((key = ftok("load_balancer.c", 'A')) == -1)
@@ -94,7 +175,6 @@ int main(int argc, char *argv[])
     }
 
     pthread_t threads[MAX_THREADS];
-    int n_threads = 0;
 
     while (1)
     {
