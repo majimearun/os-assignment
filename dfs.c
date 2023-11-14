@@ -2,85 +2,84 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct Graph
+typedef struct DFSGraph
 {
-    int num_nodes;         // number of nodes in the graph
+    int num_nodes;         // number of nodes in the DFSGraph
     int *visited;          // visited array
     int **matrix;          // adjacency matrix
     int *leaves;           // array to store the leaf nodes
     int n_leaves;          // number of leaf nodes
-    pthread_mutex_t mutex; // mutex for graph
+    pthread_mutex_t mutex; // mutex for DFSGraph
 
-} Graph;
+} DFSGraph;
 
-void init_graph(Graph *graph, int num_nodes)
+void init_DFSGraph(DFSGraph *DFSGraph, int num_nodes)
 {
-    graph->num_nodes = num_nodes;
+    DFSGraph->num_nodes = num_nodes;
 
-    graph->visited = (int *)malloc(sizeof(int) * num_nodes);
-    graph->matrix = (int **)malloc(sizeof(int *) * num_nodes);
+    DFSGraph->visited = (int *)malloc(sizeof(int) * num_nodes);
+    DFSGraph->matrix = (int **)malloc(sizeof(int *) * num_nodes);
 
     for (int i = 0; i < num_nodes; i++)
     {
-        graph->visited[i] = 0;
+        DFSGraph->visited[i] = 0;
 
-        graph->matrix[i] = (int *)malloc(sizeof(int) * num_nodes);
+        DFSGraph->matrix[i] = (int *)malloc(sizeof(int) * num_nodes);
         for (int j = 0; j < num_nodes; j++)
         {
-            graph->matrix[i][j] = 0;
+            DFSGraph->matrix[i][j] = 0;
         }
     }
 
-    graph->leaves = (int *)malloc(sizeof(int) * num_nodes);
-    graph->n_leaves = 0;
+    DFSGraph->leaves = (int *)malloc(sizeof(int) * num_nodes);
+    DFSGraph->n_leaves = 0;
 
-    pthread_mutex_init(&graph->mutex, NULL);
+    pthread_mutex_init(&DFSGraph->mutex, NULL);
 }
 
-typedef struct ThreadData
+typedef struct DFSThreadData
 {
-    Graph *graph;
+    DFSGraph *DFSGraph;
     int node;
-} ThreadData;
+} DFSThreadData;
 
 void *depth_search_leaves(void *arg)
 {
-    ThreadData *td = (ThreadData *)arg;
-    Graph *graph = td->graph;
+    DFSThreadData *td = (DFSThreadData *)arg;
+    DFSGraph *DFSGraph = td->DFSGraph;
     int node = td->node;
 
-    pthread_t threads[graph->num_nodes];
+    pthread_t threads[DFSGraph->num_nodes];
     int n_threads = 0;
 
     int leaf = 1;
 
-    for(int i = 0; i < graph->num_nodes; i++)
+    for (int i = 0; i < DFSGraph->num_nodes; i++)
     {
-        if(graph->matrix[node][i] == 1 && graph->visited[i] == 0)
+        if (DFSGraph->matrix[node][i] == 1 && DFSGraph->visited[i] == 0)
         {
             leaf = 0;
-            pthread_mutex_lock(&graph->mutex);
-            graph->visited[i] = 1;
-            pthread_mutex_unlock(&graph->mutex);
-            ThreadData *new_td = (ThreadData *)malloc(sizeof(ThreadData));
-            new_td->graph = graph;
+            pthread_mutex_lock(&DFSGraph->mutex);
+            DFSGraph->visited[i] = 1;
+            pthread_mutex_unlock(&DFSGraph->mutex);
+            DFSThreadData *new_td = (DFSThreadData *)malloc(sizeof(DFSThreadData));
+            new_td->DFSGraph = DFSGraph;
             new_td->node = i;
-            
+
             pthread_create(&threads[n_threads++], NULL, depth_search_leaves, (void *)new_td);
         }
-        
     }
 
-    for(int i = 0; i < n_threads; i++)
+    for (int i = 0; i < n_threads; i++)
     {
         pthread_join(threads[i], NULL);
     }
 
-    if(leaf == 1)
+    if (leaf == 1)
     {
-        pthread_mutex_lock(&graph->mutex);
-        graph->leaves[graph->n_leaves++] = node;
-        pthread_mutex_unlock(&graph->mutex);
+        pthread_mutex_lock(&DFSGraph->mutex);
+        DFSGraph->leaves[DFSGraph->n_leaves++] = node;
+        pthread_mutex_unlock(&DFSGraph->mutex);
     }
 
     pthread_exit(NULL);
@@ -103,22 +102,22 @@ int main()
             fscanf(fp, "%d", &matrix[i][j]);
     }
 
-    Graph graph;
-    init_graph(&graph, num);
+    DFSGraph DFSGraph;
+    init_DFSGraph(&DFSGraph, num);
     for (int i = 0; i < num; i++)
     {
         for (int j = 0; j < num; j++)
-            graph.matrix[i][j] = matrix[i][j];
+            DFSGraph.matrix[i][j] = matrix[i][j];
     }
 
     int start;
     printf("Enter the starting node: ");
     scanf("%d", &start);
     start--;
-    graph.visited[start] = 1;
+    DFSGraph.visited[start] = 1;
 
-    ThreadData *td = (ThreadData *)malloc(sizeof(ThreadData));
-    td->graph = &graph;
+    DFSThreadData *td = (DFSThreadData *)malloc(sizeof(DFSThreadData));
+    td->DFSGraph = &DFSGraph;
     td->node = start;
 
     pthread_t thread;
@@ -129,9 +128,9 @@ int main()
 
     printf("The leaf nodes are: ");
 
-    for(int i = 0; i < graph.n_leaves; i++)
+    for (int i = 0; i < DFSGraph.n_leaves; i++)
     {
-        printf("%d ", graph.leaves[i] + 1);
+        printf("%d ", DFSGraph.leaves[i] + 1);
     }
 
     printf("\n");
