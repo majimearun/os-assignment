@@ -150,6 +150,37 @@ int main()
         }
         else
         {
+            key_t key_shm;
+            int shmid;
+            int *shm;
+
+            if ((key_shm = ftok("testing.txt", msg.Sequence_Number)) == -1)
+            {
+                perror("error\n");
+                exit(1);
+            }
+
+            if ((shmid = shmget(key_shm, sizeof(char[BUF_SIZE]), 0666 | IPC_CREAT)) == -1)
+            {
+                perror("shared memory");
+                return 1;
+            }
+
+            shm = (int *)shmat(shmid, NULL, 0);
+
+            int start;
+
+            printf("Enter the starting node: ");
+            scanf("%d", &start);
+
+            // Write the starting node to shared memory
+            shm[0] = start;
+
+            if (shmdt(shm) == -1)
+            {
+                perror("shmdt");
+                return 1;
+            }
             if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
