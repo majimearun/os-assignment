@@ -150,9 +150,10 @@ int main()
         }
         else
         {
+
             key_t key_shm;
             int shmid;
-            int *shm;
+            char *shm;
 
             if ((key_shm = ftok("testing.txt", msg.Sequence_Number)) == -1)
             {
@@ -166,21 +167,17 @@ int main()
                 return 1;
             }
 
-            shm = (int *)shmat(shmid, NULL, 0);
+            shm = (char *)shmat(shmid, NULL, 0);
 
-            int start;
-
+            char start[100]="";
             printf("Enter the starting node: ");
-            scanf("%d", &start);
+            scanf("%s", start);
 
-            // Write the starting node to shared memory
-            shm[0] = start;
+            // printf("%ld",strlen(start));
+            // fflush(stdout);
 
-            if (shmdt(shm) == -1)
-            {
-                perror("shmdt");
-                return 1;
-            }
+            sprintf(shm, "%s\n", start);
+
             if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
             {
                 perror("msgsnd");
@@ -194,6 +191,32 @@ int main()
                 exit(1);
             }
             printf("%s\n", msg.contents);
+
+            // Extract the content from shared memory
+            char *op = strtok(shm, "\n");
+
+            // Remove "start" from op
+            char *startPtr = strstr(op, start);
+            if (startPtr != NULL) {
+                memmove(startPtr, startPtr + strlen(start), strlen(startPtr + strlen(start)) + 1);
+            }
+
+            printf("The leaf nodes are: \n%s\n", op);
+            fflush(stdout);
+
+            printf("\n");
+            fflush(stdout);
+
+            if (shmdt(shm) == -1) {
+                perror("shmdt");
+                return 1;
+            }
+
+            if (shmctl(shmid, IPC_RMID, 0) == -1)
+            {
+                perror("shmctl");
+                return 1;
+            }
         }
     }
 
