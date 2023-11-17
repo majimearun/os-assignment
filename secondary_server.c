@@ -127,12 +127,6 @@ void dfs(message * msg)     // msg as parameter
 
     strcpy(name,msg->contents);
 
-    // printf("Enter the name of the file: ");
-    // scanf("%s", name);              // take from msg
-
-    // printf("%s",name);
-    // fflush(stdout);
-
     FILE *fp = fopen(name, "r");
     fscanf(fp, "%d", &num);
     int matrix[num][num];
@@ -174,9 +168,6 @@ void dfs(message * msg)     // msg as parameter
     }
 
     int start = atoi(strtok(shm, "\n"));
-
-    // printf("\n%d",start);
-    // fflush(stdout);
 
     start--;
     DFSGraph.visited[start] = 1;
@@ -280,12 +271,14 @@ void *add_to_next_level(void *arg)
     pthread_exit(NULL);
 }
 
-void bfs()
+void bfs(message * msg)
 {
     int num;
+
     char name[100];
-    printf("Enter the name of the file: ");
-    scanf("%s", name);
+
+    strcpy(name,msg->contents);
+
     FILE *fp = fopen(name, "r");
     fscanf(fp, "%d", &num);
     int matrix[num][num];
@@ -304,9 +297,30 @@ void bfs()
             BFSGraph.matrix[i][j] = matrix[i][j];
     }
 
-    int start;
-    printf("Enter the starting node: ");
-    scanf("%d", &start);
+    key_t key_shm;
+    int shmid;
+
+    if ((key_shm = ftok("testing.txt", msg->Sequence_Number)) == -1)
+    {
+        perror("error\n");
+        exit(1);
+    }
+
+    if ((shmid = shmget(key_shm, sizeof(char[BUF_SIZE]), 0666)) == -1)
+    {
+        perror("shared memory");
+        exit(1);
+    }
+
+    char *shm = (char *)shmat(shmid, NULL, 0);
+    if (shm == (char *)-1)
+    {
+        perror("shmat");
+        exit(1);
+    }
+
+    int start = atoi(strtok(shm, "\n"));
+
     start--;
     BFSGraph.visited[start] = 1;
     BFSGraph.current_level[BFSGraph.nextc++] = start;
@@ -340,12 +354,18 @@ void bfs()
         n_threads = 0;
     }
 
-    printf("%d ", start + 1);
     for (int i = 0; i < BFSGraph.t_index; i++)
     {
-        printf("%d ", BFSGraph.traversal[i] + 1);
+        sprintf(shm + strlen(shm), "%d ", BFSGraph.traversal[i] + 1);
     }
-    printf("\n");
+
+    sprintf(shm + strlen(shm), "\n");
+
+    if (shmdt(shm) == -1)
+    {
+        perror("shmdt");
+        exit(1);
+    }
 }
 
 void *func(void *data)
@@ -404,27 +424,6 @@ void *func(void *data)
 
     sem_wait(sem_read);
 
-    if ((key_shm = ftok("testing.txt", msg.Sequence_Number)) == -1)
-    {
-        perror("error\n");
-        exit(1);
-    }
-
-    if ((shmid = shmget(key_shm, sizeof(char[BUF_SIZE]), 0666)) == -1)
-    {
-        perror("shared memory");
-        exit(1);
-    }
-
-    char *shm = (char *)shmat(shmid, NULL, 0);
-    if (shm == (char *)-1)
-    {
-        perror("shmat");
-        exit(1);
-    }
-
-
-
     n_threads++;
     if (n_threads == 1)
     {
@@ -444,7 +443,7 @@ void *func(void *data)
     else if (msg.Operation_Number == 4)
     {
         msg.mtype = msg.Sequence_Number * 10;
-        bfs();
+        bfs(&msg);
         char mess[100] = "BFS successfully performed\n";
         strcpy(msg.contents, mess);
     }

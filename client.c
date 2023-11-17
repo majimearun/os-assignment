@@ -201,7 +201,15 @@ int main()
                 memmove(startPtr, startPtr + strlen(start), strlen(startPtr + strlen(start)) + 1);
             }
 
-            printf("The leaf nodes are: \n%s\n", op);
+            if(msg.Operation_Number==3){
+                printf("The leaf nodes are: \n%s\n", op);
+            }
+            else{
+                int prn = atoi(start);
+                printf("Output of the BFS traversal starting at node : %d\n",prn);
+                printf("%d ",prn);
+                printf("%s\n", op);
+            }
             fflush(stdout);
 
             printf("\n");
