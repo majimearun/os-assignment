@@ -17,6 +17,16 @@
 #define MAX_THREADS 100
 #define BUF_SIZE 1024
 
+int extractNumber(const char *input)
+{
+    int number;
+    // Using sscanf to extract the number from the string
+    sscanf(input, "G%d.txt", &number);
+    return number - 1;
+}
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 typedef struct message
 {
     long mtype;           // Denotes who needs to receive the message
@@ -35,7 +45,7 @@ typedef struct ThreadData
 
 sem_t *sem;
 sem_t *sem_read;
-int n_threads = 0;
+int n_readers[30];
 typedef struct DFSGraph
 {
     int num_nodes;         // number of nodes in the DFSGraph
@@ -119,13 +129,13 @@ void *depth_search_leaves(void *arg)
     pthread_exit(NULL);
 }
 
-void dfs(message * msg)     // msg as parameter
+void dfs(message *msg) // msg as parameter
 {
     int num;
 
     char name[100];
 
-    strcpy(name,msg->contents);
+    strcpy(name, msg->contents);
 
     FILE *fp = fopen(name, "r");
     fscanf(fp, "%d", &num);
@@ -193,7 +203,6 @@ void dfs(message * msg)     // msg as parameter
         perror("shmdt");
         exit(1);
     }
-
 }
 
 typedef struct BFSGraph
@@ -271,13 +280,13 @@ void *add_to_next_level(void *arg)
     pthread_exit(NULL);
 }
 
-void bfs(message * msg)
+void bfs(message *msg)
 {
     int num;
 
     char name[100];
 
-    strcpy(name,msg->contents);
+    strcpy(name, msg->contents);
 
     FILE *fp = fopen(name, "r");
     fscanf(fp, "%d", &num);
@@ -398,39 +407,43 @@ void *func(void *data)
         }
     }
 
-    // Create and initialize the semaphore (read)
-    char name[100];
-    strcpy(name, msg.contents);
-    strcat(name, "_read");
+    // // Create and initialize the semaphore (read)
+    // char name[100];
+    // strcpy(name, msg.contents);
+    // strcat(name, "_read");
 
-    sem_read = sem_open(name, O_CREAT, PERMS, 1);
-    if (sem_read == SEM_FAILED)
+    // sem_read = sem_open(name, O_CREAT, PERMS, 1);
+    // if (sem_read == SEM_FAILED)
+    // {
+    //     if (errno != EEXIST)
+    //     {
+    //         perror("sem_open");
+    //         exit(1);
+    //     }
+    //     else
+    //     {
+    //         sem_read = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
+    //         if (sem_read == SEM_FAILED)
+    //         {
+    //             perror("sem_open");
+    //             exit(1);
+    //         }
+    //     }
+    // }
+
+    printf("getting read lock: inc\n");
+    pthread_mutex_lock(&mutex);
+
+    int f = extractNumber(msg.contents);
+    n_readers[f]++;
+    if (n_readers[f] == 1)
     {
-        if (errno != EEXIST)
-        {
-            perror("sem_open");
-            exit(1);
-        }
-        else
-        {
-            sem_read = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
-            if (sem_read == SEM_FAILED)
-            {
-                perror("sem_open");
-                exit(1);
-            }
-        }
-    }
-
-    sem_wait(sem_read);
-
-    n_threads++;
-    if (n_threads == 1)
-    {
+        printf("locking write for file %d\n", f);
         sem_wait(sem);
     }
 
-    sem_post(sem_read);
+    pthread_mutex_unlock(&mutex);
+    printf("releasing read lock: inc\n");
 
     if (msg.Operation_Number == 3)
     {
@@ -454,13 +467,19 @@ void *func(void *data)
         exit(1);
     }
 
-    sem_wait(sem_read);
-    n_threads--;
-    if (n_threads == 0)
+    printf("sleeping for 10 seconds\n");
+    sleep(10);
+
+    printf("getting read lock: reduce\n");
+    pthread_mutex_lock(&mutex);
+    n_readers[f]--;
+    if (n_readers[f] == 0)
     {
         sem_post(sem);
+        printf("unlocking write for file %d\n", f);
     }
-    sem_post(sem_read);
+    pthread_mutex_unlock(&mutex);
+    printf("releasing read lock: reduce\n");
 
     free(td);
     pthread_exit(NULL);
@@ -468,6 +487,13 @@ void *func(void *data)
 
 int main(int argc, char *argv[])
 {
+
+    for (int i = 0; i < 30; i++)
+    {
+        n_readers[i] = 0;
+    }
+
+    pthread_mutex_init(&mutex, NULL);
 
     if (argc != 2)
     {

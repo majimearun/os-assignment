@@ -139,6 +139,7 @@ void *func(void *data)
         exit(1);
     }
 
+    printf("removing lock on file\n");
     sem_post(sem);
 
     free(td);
