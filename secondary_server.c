@@ -13,26 +13,22 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+// global constants
+
 #define PERMS 0644
 #define MAX_THREADS 100
 #define BUF_SIZE 1024
 
-int extractNumber(const char *input)
-{
-    int number;
-    // Using sscanf to extract the number from the string
-    sscanf(input, "G%d.txt", &number);
-    return number - 1;
-}
-
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+sem_t *sem;
+int n_readers[30];
+pthread_mutex_t mutex;
 
 typedef struct message
 {
-    long mtype;           // Denotes who needs to receive the message
-    char contents[100];   // Graph File Name or Server Response
-    int Sequence_Number;  // Request number
-    int Operation_Number; // Operation to be performed
+    long mtype;
+    char contents[100];
+    int Sequence_Number;
+    int Operation_Number;
 
 } message;
 
@@ -43,19 +39,22 @@ typedef struct ThreadData
     int n_threads;
 } ThreadData;
 
-sem_t *sem;
-sem_t *sem_read;
-int n_readers[30];
 typedef struct DFSGraph
 {
-    int num_nodes;         // number of nodes in the DFSGraph
-    int *visited;          // visited array
-    int **matrix;          // adjacency matrix
-    int *leaves;           // array to store the leaf nodes
-    int n_leaves;          // number of leaf nodes
-    pthread_mutex_t mutex; // mutex for DFSGraph
+    int num_nodes;
+    int *visited;
+    int **matrix;
+    int *leaves;
+    int n_leaves;
+    pthread_mutex_t mutex;
 
 } DFSGraph;
+
+typedef struct DFSThreadData
+{
+    DFSGraph *DFSGraph;
+    int node;
+} DFSThreadData;
 
 void init_DFSGraph(DFSGraph *DFSGraph, int num_nodes)
 {
@@ -81,11 +80,57 @@ void init_DFSGraph(DFSGraph *DFSGraph, int num_nodes)
     pthread_mutex_init(&DFSGraph->mutex, NULL);
 }
 
-typedef struct DFSThreadData
+typedef struct BFSGraph
 {
-    DFSGraph *DFSGraph;
+    int num_nodes;
+    int *visited;
+    int *current_level;
+    int *next_level;
+    int **matrix;
+    int nextc;
+    int nextn;
+    int left;
+    pthread_mutex_t mutex;
+    int *traversal;
+    int t_index;
+
+} BFSGraph;
+
+typedef struct BFSThreadData
+{
+    BFSGraph *BFSGraph;
     int node;
-} DFSThreadData;
+} BFSThreadData;
+
+void init_BFSGraph(BFSGraph *BFSGraph, int num_nodes)
+{
+    BFSGraph->num_nodes = num_nodes;
+
+    BFSGraph->visited = (int *)malloc(sizeof(int) * num_nodes);
+    BFSGraph->current_level = (int *)malloc(sizeof(int) * num_nodes);
+    BFSGraph->next_level = (int *)malloc(sizeof(int) * num_nodes);
+    BFSGraph->matrix = (int **)malloc(sizeof(int *) * num_nodes);
+    BFSGraph->traversal = (int *)malloc(sizeof(int) * num_nodes);
+    BFSGraph->t_index = 0;
+
+    for (int i = 0; i < num_nodes; i++)
+    {
+        BFSGraph->visited[i] = 0;
+        BFSGraph->current_level[i] = 0;
+        BFSGraph->next_level[i] = 0;
+        BFSGraph->matrix[i] = (int *)malloc(sizeof(int) * num_nodes);
+        for (int j = 0; j < num_nodes; j++)
+        {
+            BFSGraph->matrix[i][j] = 0;
+        }
+    }
+
+    BFSGraph->nextc = 0;
+    BFSGraph->nextn = 0;
+    BFSGraph->left = num_nodes;
+
+    pthread_mutex_init(&BFSGraph->mutex, NULL);
+}
 
 void *depth_search_leaves(void *arg)
 {
@@ -109,7 +154,6 @@ void *depth_search_leaves(void *arg)
             DFSThreadData *new_td = (DFSThreadData *)malloc(sizeof(DFSThreadData));
             new_td->DFSGraph = DFSGraph;
             new_td->node = i;
-
             pthread_create(&threads[n_threads++], NULL, depth_search_leaves, (void *)new_td);
         }
     }
@@ -129,7 +173,7 @@ void *depth_search_leaves(void *arg)
     pthread_exit(NULL);
 }
 
-void dfs(message *msg) // msg as parameter
+void dfs(message *msg)
 {
     int num;
 
@@ -205,61 +249,8 @@ void dfs(message *msg) // msg as parameter
     }
 }
 
-typedef struct BFSGraph
-{
-    int num_nodes;         // number of nodes in the BFSGraph
-    int *visited;          // visited array
-    int *current_level;    // nodes visited in current layer
-    int *next_level;       // nodes that need to be visited in next layer
-    int **matrix;          // adjacency matrix
-    int nextc;             // index of the current_level array
-    int nextn;             // index of the next_level array
-    int left;              // number of nodes left to be visited
-    pthread_mutex_t mutex; // mutex for BFSGraph
-    int *traversal;        // array to store the traversal
-    int t_index;           // index of traversal array
-
-} BFSGraph;
-
-void init_BFSGraph(BFSGraph *BFSGraph, int num_nodes)
-{
-    BFSGraph->num_nodes = num_nodes;
-
-    BFSGraph->visited = (int *)malloc(sizeof(int) * num_nodes);
-    BFSGraph->current_level = (int *)malloc(sizeof(int) * num_nodes);
-    BFSGraph->next_level = (int *)malloc(sizeof(int) * num_nodes);
-    BFSGraph->matrix = (int **)malloc(sizeof(int *) * num_nodes);
-    BFSGraph->traversal = (int *)malloc(sizeof(int) * num_nodes);
-    BFSGraph->t_index = 0;
-
-    for (int i = 0; i < num_nodes; i++)
-    {
-        BFSGraph->visited[i] = 0;
-        BFSGraph->current_level[i] = 0;
-        BFSGraph->next_level[i] = 0;
-        BFSGraph->matrix[i] = (int *)malloc(sizeof(int) * num_nodes);
-        for (int j = 0; j < num_nodes; j++)
-        {
-            BFSGraph->matrix[i][j] = 0;
-        }
-    }
-
-    BFSGraph->nextc = 0;
-    BFSGraph->nextn = 0;
-    BFSGraph->left = num_nodes;
-
-    pthread_mutex_init(&BFSGraph->mutex, NULL);
-}
-
-typedef struct BFSThreadData
-{
-    BFSGraph *BFSGraph;
-    int node;
-} BFSThreadData;
-
 void *add_to_next_level(void *arg)
 {
-    // printf("In thread for %d\n", ((BFSThreadData *)arg)->node + 1);
     BFSThreadData *td = (BFSThreadData *)arg;
     BFSGraph *BFSGraph = td->BFSGraph;
     int node = td->node;
@@ -377,6 +368,13 @@ void bfs(message *msg)
     }
 }
 
+int extractNumber(const char *input)
+{
+    int number;
+    sscanf(input, "G%d.txt", &number);
+    return number - 1;
+}
+
 void *func(void *data)
 {
     ThreadData *td = (ThreadData *)data;
@@ -387,7 +385,6 @@ void *func(void *data)
     int shmid;
     key_t key_shm;
 
-    // Create and initialize the semaphore (wrt)
     sem = sem_open(msg.contents, O_CREAT, PERMS, 1);
     if (sem == SEM_FAILED)
     {
@@ -398,7 +395,7 @@ void *func(void *data)
         }
         else
         {
-            sem = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
+            sem = sem_open(msg.contents, 0);
             if (sem == SEM_FAILED)
             {
                 perror("sem_open");
@@ -407,43 +404,16 @@ void *func(void *data)
         }
     }
 
-    // // Create and initialize the semaphore (read)
-    // char name[100];
-    // strcpy(name, msg.contents);
-    // strcat(name, "_read");
-
-    // sem_read = sem_open(name, O_CREAT, PERMS, 1);
-    // if (sem_read == SEM_FAILED)
-    // {
-    //     if (errno != EEXIST)
-    //     {
-    //         perror("sem_open");
-    //         exit(1);
-    //     }
-    //     else
-    //     {
-    //         sem_read = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
-    //         if (sem_read == SEM_FAILED)
-    //         {
-    //             perror("sem_open");
-    //             exit(1);
-    //         }
-    //     }
-    // }
-
-    printf("getting read lock: inc\n");
     pthread_mutex_lock(&mutex);
 
     int f = extractNumber(msg.contents);
     n_readers[f]++;
     if (n_readers[f] == 1)
     {
-        printf("locking write for file %d\n", f);
         sem_wait(sem);
     }
 
     pthread_mutex_unlock(&mutex);
-    printf("releasing read lock: inc\n");
 
     if (msg.Operation_Number == 3)
     {
@@ -467,19 +437,13 @@ void *func(void *data)
         exit(1);
     }
 
-    printf("sleeping for 10 seconds\n");
-    sleep(10);
-
-    printf("getting read lock: reduce\n");
     pthread_mutex_lock(&mutex);
     n_readers[f]--;
     if (n_readers[f] == 0)
     {
         sem_post(sem);
-        printf("unlocking write for file %d\n", f);
     }
     pthread_mutex_unlock(&mutex);
-    printf("releasing read lock: reduce\n");
 
     free(td);
     pthread_exit(NULL);
