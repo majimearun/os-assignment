@@ -20,7 +20,7 @@
 #define BUF_SIZE 1024
 
 sem_t *sem;
-int n_readers[30];
+int n_readers[100];
 pthread_mutex_t mutex;
 
 typedef struct message
@@ -456,7 +456,7 @@ void *func(void *data)
 int main(int argc, char *argv[])
 {
 
-    for (int i = 0; i < 30; i++)
+    for (int i = 0; i < 100; i++)
     {
         n_readers[i] = 0;
     }
