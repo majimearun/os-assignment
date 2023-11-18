@@ -89,7 +89,6 @@ typedef struct BFSGraph
     int **matrix;
     int nextc;
     int nextn;
-    int left;
     pthread_mutex_t mutex;
     int *traversal;
     int t_index;
@@ -127,7 +126,6 @@ void init_BFSGraph(BFSGraph *BFSGraph, int num_nodes)
 
     BFSGraph->nextc = 0;
     BFSGraph->nextn = 0;
-    BFSGraph->left = num_nodes;
 
     pthread_mutex_init(&BFSGraph->mutex, NULL);
 }
@@ -265,7 +263,6 @@ void *add_to_next_level(void *arg)
             BFSGraph->traversal[BFSGraph->t_index++] = i;
             BFSGraph->next_level[BFSGraph->nextn++] = i;
             BFSGraph->visited[i] = 1;
-            BFSGraph->left--;
             pthread_mutex_unlock(&BFSGraph->mutex);
         }
     }
@@ -330,8 +327,7 @@ void bfs(message *msg)
     pthread_t threads[num];
     int n_threads = 0;
 
-    BFSGraph.left--;
-    while (BFSGraph.left > 0)
+    while (BFSGraph.nextc > 0)
     {
 
         for (int i = 0; i < BFSGraph.nextc; i++)
