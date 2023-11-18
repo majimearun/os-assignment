@@ -19,10 +19,10 @@
 
 typedef struct message
 {
-    long mtype;           // Denotes who needs to receive the message
-    char contents[100];   // Graph File Name or Server Response
-    int Sequence_Number;  // Request number
-    int Operation_Number; // Operation to be performed
+    long mtype;
+    char contents[100];
+    int Sequence_Number;
+    int Operation_Number;
 
 } message;
 
@@ -43,7 +43,6 @@ void *func(void *data)
     key_t key_shm;
     int shmid;
 
-    // Create and initialize the semaphore (wrt)
     sem = sem_open(msg.contents, O_CREAT, PERMS, 1);
     if (sem == SEM_FAILED)
     {
@@ -54,7 +53,7 @@ void *func(void *data)
         }
         else
         {
-            sem = sem_open(msg.contents, 0); // Semaphore already exists, open it without O_CREAT
+            sem = sem_open(msg.contents, 0);
             if (sem == SEM_FAILED)
             {
                 perror("sem_open");
@@ -86,7 +85,6 @@ void *func(void *data)
 
     int numNodes = atoi(strtok(shm, "\n"));
 
-    // Open the file for writing, creating or truncating it if it exists
     FILE *graphFile = fopen(msg.contents, "w");
     if (graphFile == NULL)
     {
@@ -94,7 +92,6 @@ void *func(void *data)
         exit(1);
     }
 
-    // Write the number of nodes to the file
     fprintf(graphFile, "%d\n", numNodes);
 
     for (int i = 0; i < numNodes; i++)
@@ -105,28 +102,25 @@ void *func(void *data)
             perror("Error reading from shared memory");
             exit(1);
         }
-        // Process the adjacency matrix row, add/update to the file
         fprintf(graphFile, "%s\n", adjrow);
     }
 
-    // Close the file after the loop
     fclose(graphFile);
 
-    // Detach from shared memory
     if (shmdt(shm) == -1)
     {
         perror("shmdt");
         exit(1);
     }
 
-    if (msg.Operation_Number == 1) // sending back to client
+    if (msg.Operation_Number == 1)
     {
         msg.mtype = msg.Sequence_Number * 10;
         char mess[100] = "File successfully added\n";
         strcpy(msg.contents, mess);
     }
 
-    else if (msg.Operation_Number == 2) // sending back to client
+    else if (msg.Operation_Number == 2)
     {
         msg.mtype = msg.Sequence_Number * 10;
         char mess[100] = "File successfully modified\n";
@@ -193,8 +187,6 @@ int main()
             pthread_create(&threads[n_threads++], NULL, func, (void *)td);
         }
     }
-
-    // Destroy the semaphore
     sem_close(sem);
     return 0;
 }

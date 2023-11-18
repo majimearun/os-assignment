@@ -19,7 +19,7 @@
 typedef struct message
 {
     long mtype;
-    char contents[100]; // Graph File Name or Server Response
+    char contents[100];
     int Sequence_Number;
     int Operation_Number;
 
@@ -47,7 +47,6 @@ int main()
         message msg;
         msg.mtype = 4;
 
-        //  send step:
         printf("1. Add a new graph to the database\n");
         printf("2. Modify an existing graph of the database\n");
         printf("3. Perform DFS on an existing graph of the database\n");
@@ -56,8 +55,6 @@ int main()
         int sequence_number = 0;
         int operation_number = 0;
         char contents[100] = "";
-
-        // TODO: ensure input are in correct range
 
         printf("Enter Sequence Number: ");
         scanf("%d", &sequence_number);
@@ -92,17 +89,15 @@ int main()
 
             shm = (char *)shmat(shmid, NULL, 0);
 
-            char n[100] = ""; // no of nodes which we have to write into shm[0], add a new line too
+            char n[100] = "";
 
             printf("Enter number of nodes of the graph : ");
             scanf("%s", n);
 
-            // Write the number of nodes to shared memory
             sprintf(shm, "%s\n", n);
 
             char adjrow[100] = "";
 
-            // Clear the stdin buffer
             int c;
             while ((c = getchar()) != '\n' && c != EOF)
                 ;
@@ -112,13 +107,11 @@ int main()
 
             for (int i = 0; i < atoi(n); i++)
             {
-                scanf(" %[^\n]", adjrow); // Notice the space before % to skip leading whitespaces
+                scanf(" %[^\n]", adjrow);
 
-                // Clear the stdin buffer
                 while ((c = getchar()) != '\n' && c != EOF)
                     ;
 
-                // Append each row into shared memory along with the new line
                 sprintf(shm + strlen(shm), "%s\n", adjrow);
             }
 
@@ -134,7 +127,6 @@ int main()
                 exit(1);
             }
 
-            // receive step:
             if (msgrcv(msqid, &msg, sizeof(message) - sizeof(long), sequence_number * 10, 0) == -1)
             {
                 perror("msgrcv");
@@ -173,9 +165,6 @@ int main()
             printf("Enter the starting node: ");
             scanf("%s", start);
 
-            // printf("%ld",strlen(start));
-            // fflush(stdout);
-
             sprintf(shm, "%s\n", start);
 
             if (msgsnd(msqid, &msg, sizeof(message) - sizeof(long), 0) == -1)
@@ -184,7 +173,6 @@ int main()
                 exit(1);
             }
 
-            // receive step:
             if (msgrcv(msqid, &msg, sizeof(message) - sizeof(long), sequence_number * 10, 0) == -1)
             {
                 perror("msgrcv");
@@ -192,10 +180,8 @@ int main()
             }
             printf("%s\n", msg.contents);
 
-            // Extract the content from shared memory
             char *op = strtok(shm, "\n");
 
-            // Remove "start" from op
             char *startPtr = strstr(op, start);
             if (startPtr != NULL)
             {
@@ -213,10 +199,6 @@ int main()
                 printf("%d ", prn);
                 printf("%s\n", op);
             }
-            fflush(stdout);
-
-            printf("\n");
-            fflush(stdout);
 
             if (shmdt(shm) == -1)
             {

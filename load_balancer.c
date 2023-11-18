@@ -14,10 +14,10 @@
 
 typedef struct message
 {
-    long mtype;           // Denotes who needs to receive the message
-    char contents[100];   // Graph File Name or Server Response
-    int Sequence_Number;  // Request number
-    int Operation_Number; // Operation to be performed
+    long mtype;
+    char contents[100];
+    int Sequence_Number;
+    int Operation_Number;
 
 } message;
 
@@ -47,7 +47,6 @@ int main()
             exit(1);
         }
 
-        // forwarding cleanup requests
         if (msg.Operation_Number == 0)
         {
             msg.mtype = 3;
@@ -81,7 +80,6 @@ int main()
             break;
         }
 
-        // forwarding write requests
         else if (msg.Operation_Number == 1 || msg.Operation_Number == 2)
         {
             msg.mtype = 3;
