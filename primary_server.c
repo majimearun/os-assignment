@@ -65,7 +65,7 @@ void *func(void *data)
 
     sem_wait(sem);
 
-    if ((key_shm = ftok("testing.txt", msg.Sequence_Number)) == -1)
+    if ((key_shm = ftok("load_balancer.c", msg.Sequence_Number)) == -1)
     {
         perror("error\n");
         exit(1);

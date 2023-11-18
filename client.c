@@ -78,7 +78,7 @@ int main()
             int shmid;
             char *shm;
 
-            if ((key_shm = ftok("testing.txt", msg.Sequence_Number)) == -1)
+            if ((key_shm = ftok("load_balancer.c", msg.Sequence_Number)) == -1)
             {
                 perror("error\n");
                 exit(1);
@@ -155,7 +155,7 @@ int main()
             int shmid;
             char *shm;
 
-            if ((key_shm = ftok("testing.txt", msg.Sequence_Number)) == -1)
+            if ((key_shm = ftok("load_balancer.c", msg.Sequence_Number)) == -1)
             {
                 perror("error\n");
                 exit(1);
@@ -169,7 +169,7 @@ int main()
 
             shm = (char *)shmat(shmid, NULL, 0);
 
-            char start[100]="";
+            char start[100] = "";
             printf("Enter the starting node: ");
             scanf("%s", start);
 
@@ -197,17 +197,20 @@ int main()
 
             // Remove "start" from op
             char *startPtr = strstr(op, start);
-            if (startPtr != NULL) {
+            if (startPtr != NULL)
+            {
                 memmove(startPtr, startPtr + strlen(start), strlen(startPtr + strlen(start)) + 1);
             }
 
-            if(msg.Operation_Number==3){
+            if (msg.Operation_Number == 3)
+            {
                 printf("The leaf nodes are: \n%s\n", op);
             }
-            else{
+            else
+            {
                 int prn = atoi(start);
-                printf("Output of the BFS traversal starting at node : %d\n",prn);
-                printf("%d ",prn);
+                printf("Output of the BFS traversal starting at node : %d\n", prn);
+                printf("%d ", prn);
                 printf("%s\n", op);
             }
             fflush(stdout);
@@ -215,7 +218,8 @@ int main()
             printf("\n");
             fflush(stdout);
 
-            if (shmdt(shm) == -1) {
+            if (shmdt(shm) == -1)
+            {
                 perror("shmdt");
                 return 1;
             }

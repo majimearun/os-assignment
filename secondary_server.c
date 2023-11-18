@@ -158,7 +158,7 @@ void dfs(message *msg) // msg as parameter
     key_t key_shm;
     int shmid;
 
-    if ((key_shm = ftok("testing.txt", msg->Sequence_Number)) == -1)
+    if ((key_shm = ftok("load_balancer.c", msg->Sequence_Number)) == -1)
     {
         perror("error\n");
         exit(1);
@@ -309,7 +309,7 @@ void bfs(message *msg)
     key_t key_shm;
     int shmid;
 
-    if ((key_shm = ftok("testing.txt", msg->Sequence_Number)) == -1)
+    if ((key_shm = ftok("load_balancer.c", msg->Sequence_Number)) == -1)
     {
         perror("error\n");
         exit(1);
