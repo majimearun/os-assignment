@@ -392,11 +392,11 @@ void *func(void *data)
 
     char name[100] = "";
     strcat(name, msg.contents);
-    char *server_num = (char *)malloc(sizeof(char) * 2);
+    char *server_num = (char *)malloc(sizeof(char) * 3);
     server_num[0] = ' ';
     server_num[1] = server_number + '0';
+    server_num[2] = '\0';
     strcat(name, server_num);
-
     sem = sem_open(name, O_CREAT, PERMS, 1);
     if (sem == SEM_FAILED)
     {
