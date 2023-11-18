@@ -247,6 +247,8 @@ void dfs(message *msg)
         perror("shmdt");
         exit(1);
     }
+
+    pthread_mutex_destroy(&DFSGraph.mutex);
 }
 
 void *add_to_next_level(void *arg)
@@ -366,6 +368,8 @@ void bfs(message *msg)
         perror("shmdt");
         exit(1);
     }
+
+    pthread_mutex_destroy(&BFSGraph.mutex);
 }
 
 int extractNumber(const char *input)
@@ -519,5 +523,8 @@ int main(int argc, char *argv[])
             pthread_create(&threads[n_threads++], NULL, func, (void *)td);
         }
     }
+
+    sem_close(sem);
+    pthread_mutex_destroy(&mutex);
     return 0;
 }
