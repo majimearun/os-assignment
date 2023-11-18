@@ -36,7 +36,7 @@ typedef struct ThreadData
 {
     int msqid;
     message msg;
-    int server_number;
+    unsigned short server_number;
 } ThreadData;
 
 typedef struct DFSGraph
@@ -391,7 +391,11 @@ void *func(void *data)
     key_t key_shm;
 
     char name[100] = "";
-    sprintf(name, "%s %d", msg.contents, server_number);
+    strcat(name, msg.contents);
+    char *server_num = (char *)malloc(sizeof(char) * 2);
+    server_num[0] = ' ';
+    server_num[1] = server_number + '0';
+    strcat(name, server_num);
 
     sem = sem_open(name, O_CREAT, PERMS, 1);
     if (sem == SEM_FAILED)
@@ -473,7 +477,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    int server_number = atoi(argv[1]);
+    unsigned short server_number = atoi(argv[1]);
 
     if (server_number != 1 && server_number != 2)
     {

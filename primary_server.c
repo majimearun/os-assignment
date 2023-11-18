@@ -65,7 +65,8 @@ void *func(void *data)
     }
 
     char name1[100] = "";
-    sprintf(name1, "%s %d", msg.contents, 1);
+    strcat(name1, msg.contents);
+    strcat(name1, " 1");
 
     sem1 = sem_open(name1, O_CREAT, PERMS, 1);
     if (sem1 == SEM_FAILED)
@@ -87,7 +88,8 @@ void *func(void *data)
     }
 
     char name2[100] = "";
-    sprintf(name2, "%s %d", msg.contents, 2);
+    strcat(name2, msg.contents);
+    strcat(name2, " 2");
 
     sem2 = sem_open(name2, O_CREAT, PERMS, 1);
     if (sem2 == SEM_FAILED)
