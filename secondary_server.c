@@ -234,9 +234,13 @@ void dfs(message *msg)
 
     pthread_join(thread, NULL);
 
-    for (int i = 0; i < DFSGraph.n_leaves; i++)
+    if (DFSGraph.num_nodes != 0)
     {
-        sprintf(shm + strlen(shm), "%d ", DFSGraph.leaves[i] + 1);
+
+        for (int i = 0; i < DFSGraph.n_leaves; i++)
+        {
+            sprintf(shm + strlen(shm), "%d ", DFSGraph.leaves[i] + 1);
+        }
     }
     sprintf(shm + strlen(shm), "\n");
 
@@ -350,6 +354,11 @@ void bfs(message *msg)
         BFSGraph.nextn = 0;
 
         n_threads = 0;
+    }
+
+    if (BFSGraph.num_nodes != 0)
+    {
+        sprintf(shm + strlen(shm), "%d ", start + 1);
     }
 
     for (int i = 0; i < BFSGraph.t_index; i++)

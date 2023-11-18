@@ -194,9 +194,7 @@ int main()
             }
             else
             {
-                int prn = atoi(start);
-                printf("Output of the BFS traversal starting at node : %d\n", prn);
-                printf("%d ", prn);
+                printf("Output of the BFS traversal: \n");
                 printf("%s\n", op);
             }
 

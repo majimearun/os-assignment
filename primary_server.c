@@ -32,7 +32,6 @@ typedef struct ThreadData
     message msg;
 } ThreadData;
 
-sem_t *sem;
 sem_t *sem1;
 sem_t *sem2;
 
@@ -44,25 +43,6 @@ void *func(void *data)
 
     key_t key_shm;
     int shmid;
-
-    sem = sem_open(msg.contents, O_CREAT, PERMS, 1);
-    if (sem == SEM_FAILED)
-    {
-        if (errno != EEXIST)
-        {
-            perror("sem_open");
-            exit(1);
-        }
-        else
-        {
-            sem = sem_open(msg.contents, 0);
-            if (sem == SEM_FAILED)
-            {
-                perror("sem_open");
-                exit(1);
-            }
-        }
-    }
 
     char name1[100] = "";
     strcat(name1, msg.contents);
@@ -108,7 +88,6 @@ void *func(void *data)
         }
     }
 
-    sem_wait(sem);
     sem_wait(sem1);
     sem_wait(sem2);
 
@@ -181,7 +160,6 @@ void *func(void *data)
         exit(1);
     }
 
-    sem_post(sem);
     sem_post(sem1);
     sem_post(sem2);
 
@@ -236,6 +214,7 @@ int main()
             pthread_create(&threads[n_threads++], NULL, func, (void *)td);
         }
     }
-    sem_close(sem);
+    sem_close(sem1);
+    sem_close(sem2);
     return 0;
 }
