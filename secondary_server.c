@@ -36,7 +36,7 @@ typedef struct ThreadData
 {
     int msqid;
     message msg;
-    int n_threads;
+    int server_number;
 } ThreadData;
 
 typedef struct DFSGraph
@@ -385,11 +385,15 @@ void *func(void *data)
 
     int msqid = td->msqid;
     message msg = td->msg;
+    int server_number = td->server_number;
 
     int shmid;
     key_t key_shm;
 
-    sem = sem_open(msg.contents, O_CREAT, PERMS, 1);
+    char name[100] = "";
+    sprintf(name, "%s %d", msg.contents, server_number);
+
+    sem = sem_open(name, O_CREAT, PERMS, 1);
     if (sem == SEM_FAILED)
     {
         if (errno != EEXIST)
@@ -399,7 +403,7 @@ void *func(void *data)
         }
         else
         {
-            sem = sem_open(msg.contents, 0);
+            sem = sem_open(name, 0);
             if (sem == SEM_FAILED)
             {
                 perror("sem_open");
@@ -520,6 +524,7 @@ int main(int argc, char *argv[])
             ThreadData *td = (ThreadData *)malloc(sizeof(ThreadData));
             td->msqid = msqid;
             td->msg = msg;
+            td->server_number = server_number;
             pthread_create(&threads[n_threads++], NULL, func, (void *)td);
         }
     }

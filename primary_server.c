@@ -33,6 +33,8 @@ typedef struct ThreadData
 } ThreadData;
 
 sem_t *sem;
+sem_t *sem1;
+sem_t *sem2;
 
 void *func(void *data)
 {
@@ -62,7 +64,53 @@ void *func(void *data)
         }
     }
 
+    char name1[100] = "";
+    sprintf(name1, "%s %d", msg.contents, 1);
+
+    sem1 = sem_open(name1, O_CREAT, PERMS, 1);
+    if (sem1 == SEM_FAILED)
+    {
+        if (errno != EEXIST)
+        {
+            perror("sem_open");
+            exit(1);
+        }
+        else
+        {
+            sem1 = sem_open(name1, 0);
+            if (sem1 == SEM_FAILED)
+            {
+                perror("sem_open");
+                exit(1);
+            }
+        }
+    }
+
+    char name2[100] = "";
+    sprintf(name2, "%s %d", msg.contents, 2);
+
+    sem2 = sem_open(name2, O_CREAT, PERMS, 1);
+    if (sem2 == SEM_FAILED)
+    {
+        if (errno != EEXIST)
+        {
+            perror("sem_open");
+            exit(1);
+        }
+        else
+        {
+            sem2 = sem_open(name2, 0);
+            if (sem2 == SEM_FAILED)
+            {
+                perror("sem_open");
+                exit(1);
+            }
+        }
+    }
+
     sem_wait(sem);
+    sem_wait(sem1);
+    sem_wait(sem2);
 
     if ((key_shm = ftok("load_balancer.c", msg.Sequence_Number)) == -1)
     {
@@ -133,8 +181,9 @@ void *func(void *data)
         exit(1);
     }
 
-    printf("removing lock on file\n");
     sem_post(sem);
+    sem_post(sem1);
+    sem_post(sem2);
 
     free(td);
     pthread_exit(NULL);
